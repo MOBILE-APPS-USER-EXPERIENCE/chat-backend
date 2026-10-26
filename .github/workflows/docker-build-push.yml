@@ -1,104 +1,107 @@
 name: Build and Push Docker Image
 
 on:
-    push:
-        branches: [main]
-        tags: ["v*.*.*"]
-    pull_request:
-        branches: [main]
-    workflow_dispatch: {}
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
 
 concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
-    REGISTRY: ghcr.io
-    IMAGE_NAME: mobille-apps-user-experience/chat-backend
+  REGISTRY: ghcr.io
 
 jobs:
-    build-and-push:
-        runs-on: ubuntu-latest
-        permissions:
-            contents: read
-            packages: write
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
+    steps:
+      - name: downcase REPO
+        run: |
+          echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
 
-            - name: Set up Docker Buildx
-              uses: docker/setup-buildx-action@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-            - name: Extract Docker metadata
-              id: meta
-              uses: docker/metadata-action@v5
-              with:
-                  images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-                  tags: |
-                      type=ref,event=branch
-                      type=semver,pattern={{version}}
-                      type=semver,pattern={{major}}.{{minor}}
-                      type=sha,prefix=sha-,format=short
-                      type=raw,value=latest,enable={{is_default_branch}}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-            # Baut das Image lokal (push: false) — läuft auch für Pull Requests,
-            # wo ohnehin nicht gepusht werden darf. So wird jeder Build getestet,
-            # bevor er überhaupt an die Registry geht.
-            - name: Build image (local, for smoke test)
-              uses: docker/build-push-action@v6
-              with:
-                  context: .
-                  load: true
-                  push: false
-                  tags: smoke-test:latest
-                  cache-from: type=gha
-                  cache-to: type=gha,mode=max
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.REPO }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
 
-            - name: Verify native module loads correctly
-              run: docker run --rm smoke-test:latest node -e "require('better-sqlite3')(':memory:'); console.log('better-sqlite3 OK')"
+      # Baut das Image lokal (push: false) — läuft auch für Pull Requests,
+      # wo ohnehin nicht gepusht werden darf. So wird jeder Build getestet,
+      # bevor er überhaupt an die Registry geht.
+      - name: Build image (local, for smoke test)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          push: false
+          tags: smoke-test:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-            - name: Smoke test container
-              run: |
-                  docker run -d --name smoke-test -p 8080:8080 \
-                    -e ADMIN_KEY_HASH=dummy \
-                    smoke-test:latest
+      - name: Verify native module loads correctly
+        run: docker run --rm smoke-test:latest node -e "require('better-sqlite3')(':memory:'); console.log('better-sqlite3 OK')"
 
-                  echo "Warte auf Serverstart..."
-                  for i in $(seq 1 15); do
-                    if curl -sf "http://localhost:8080/?request=ping" | grep -q "Pong"; then
-                      echo "Server antwortet korrekt."
-                      exit 0
-                    fi
-                    sleep 1
-                  done
+      - name: Smoke test container
+        run: |
+          docker run -d --name smoke-test -p 8080:8080 \
+            -e ADMIN_KEY_HASH=dummy \
+            smoke-test:latest
 
-                  echo "Server hat nicht rechtzeitig geantwortet:"
-                  docker logs smoke-test
-                  exit 1
+          echo "Warte auf Serverstart..."
+          for i in $(seq 1 15); do
+            if curl -sf "http://localhost:8080/?request=ping" | grep -q "Pong"; then
+              echo "Server antwortet korrekt."
+              exit 0
+            fi
+            sleep 1
+          done
 
-            - name: Stop smoke test container
-              if: always()
-              run: docker rm -f smoke-test || true
+          echo "Server hat nicht rechtzeitig geantwortet:"
+          docker logs smoke-test
+          exit 1
 
-            - name: Log in to GitHub Container Registry
-              if: github.event_name != 'pull_request'
-              uses: docker/login-action@v3
-              with:
-                  registry: ${{ env.REGISTRY }}
-                  username: ${{ github.actor }}
-                  password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Stop smoke test container
+        if: always()
+        run: docker rm -f smoke-test || true
 
-            # Erneuter Build, jetzt mit push: true. Dank cache-from greifen
-            # praktisch alle Layer aus dem vorherigen Build (inkl. des langsamen
-            # better-sqlite3-Compile-Schritts) — dieser Schritt ist dadurch in der
-            # Praxis nur noch ein Upload, kein erneuter Compile-Lauf.
-            - name: Build and push image
-              if: github.event_name != 'pull_request'
-              uses: docker/build-push-action@v6
-              with:
-                  context: .
-                  push: true
-                  tags: ${{ steps.meta.outputs.tags }}
-                  labels: ${{ steps.meta.outputs.labels }}
-                  cache-from: type=gha
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Erneuter Build, jetzt mit push: true. Dank cache-from greifen
+      # praktisch alle Layer aus dem vorherigen Build (inkl. des langsamen
+      # better-sqlite3-Compile-Schritts) — dieser Schritt ist dadurch in der
+      # Praxis nur noch ein Upload, kein erneuter Compile-Lauf.
+      - name: Build and push image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
