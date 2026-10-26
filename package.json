@@ -1,0 +1,30 @@
+{
+  "name": "chat-server",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "migrate": "ts-node ./node_modules/.bin/knex migrate:latest --knexfile src/db/knexfile.ts --env sqlite",
+    "migrate:make": "ts-node ./node_modules/.bin/knex migrate:make --knexfile src/db/knexfile.ts --env sqlite -x ts",
+    "hash-secret": "ts-node src/scripts/hash-secret.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "knex": "^3.3.0",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.19.43",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.6.0"
+  },
+  "allowScripts": {
+    "better-sqlite3@13.0.3": true
+  }
+}

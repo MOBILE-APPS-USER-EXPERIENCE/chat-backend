@@ -1,0 +1,232 @@
+<!-- src/manual.html -->
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="utf-8">
+    <title>Chat Server Manual</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 860px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        code {
+            background: #f0f0f0;
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 1.5rem;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 0.4rem 0.6rem;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            background: #fafafa;
+        }
+
+        h2 {
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0.2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Chat Server Manual</h1>
+    <p>
+        Alle Befehle laufen über einen einzigen Endpunkt. GET-Requests übergeben
+        <code>request=&lt;name&gt;</code> plus weitere Parameter als Query-String;
+        das einzige POST-Kommando (<code>postmessage</code>) übergibt alles,
+        inklusive <code>request</code>, als JSON-Body.
+    </p>
+    <p>
+        Die meisten Kommandos benötigen ein <code>token</code> aus
+        <code>register</code>/<code>login</code>. Einige Admin-Kommandos
+        benötigen zusätzlich einen gültigen Admin-<code>key</code>.
+    </p>
+
+    <h2>Account</h2>
+    <table>
+        <tr>
+            <th>Kommando</th>
+            <th>Parameter</th>
+            <th>Beschreibung</th>
+        </tr>
+        <tr>
+            <td><code>ping</code></td>
+            <td>–</td>
+            <td>Lebenszeichen, kein Token nötig.</td>
+        </tr>
+        <tr>
+            <td><code>register</code></td>
+            <td>userid, password, nickname, fullname</td>
+            <td>Account anlegen, liefert token + hash.</td>
+        </tr>
+        <tr>
+            <td><code>login</code></td>
+            <td>userid, password</td>
+            <td>Neues Token ausstellen.</td>
+        </tr>
+        <tr>
+            <td><code>logout</code></td>
+            <td>token</td>
+            <td>Aktuelles Token ungültig machen.</td>
+        </tr>
+        <tr>
+            <td><code>validatetoken</code></td>
+            <td>token</td>
+            <td>Prüft Token (immer HTTP 200, Ergebnis in <code>message</code>).</td>
+        </tr>
+        <tr>
+            <td><code>deregister</code></td>
+            <td>token</td>
+            <td>Eigenen Account löschen (Nachrichten bleiben erhalten).</td>
+        </tr>
+    </table>
+
+    <h2>Nachrichten</h2>
+    <table>
+        <tr>
+            <th>Kommando</th>
+            <th>Parameter</th>
+            <th>Beschreibung</th>
+        </tr>
+        <tr>
+            <td><code>postmessage</code> (POST)</td>
+            <td>token, text?, photo?, file?, position?, chatid?, important?</td>
+            <td>Nachricht in einen Chat posten.</td>
+        </tr>
+        <tr>
+            <td><code>getmessages</code></td>
+            <td>token, fromid?, chatid?, key?</td>
+            <td>Nachrichten ab einer id abrufen.</td>
+        </tr>
+        <tr>
+            <td><code>getphoto</code></td>
+            <td>token, photoid</td>
+            <td>Foto als PNG herunterladen.</td>
+        </tr>
+        <tr>
+            <td><code>getfile</code></td>
+            <td>token, fileid</td>
+            <td>Datei herunterladen.</td>
+        </tr>
+    </table>
+
+    <h2>Chats</h2>
+    <table>
+        <tr>
+            <th>Kommando</th>
+            <th>Parameter</th>
+            <th>Beschreibung</th>
+        </tr>
+        <tr>
+            <td><code>getchats</code></td>
+            <td>token, key?</td>
+            <td>Sichtbare Chats auflisten.</td>
+        </tr>
+        <tr>
+            <td><code>createchat</code></td>
+            <td>token, chatname, ispublic?, directchat?</td>
+            <td>Neuen Chat erstellen.</td>
+        </tr>
+        <tr>
+            <td><code>deletechat</code></td>
+            <td>token, chatid, key?</td>
+            <td>Chat löschen (nur Owner/Admin).</td>
+        </tr>
+        <tr>
+            <td><code>joinchat</code></td>
+            <td>token, chatid</td>
+            <td>Chat beitreten (öffentlich oder eingeladen).</td>
+        </tr>
+        <tr>
+            <td><code>leavechat</code></td>
+            <td>token, chatid</td>
+            <td>Chat verlassen (nicht als Owner, nicht Main-Chat).</td>
+        </tr>
+    </table>
+
+    <h2>Einladungen</h2>
+    <table>
+        <tr>
+            <th>Kommando</th>
+            <th>Parameter</th>
+            <th>Beschreibung</th>
+        </tr>
+        <tr>
+            <td><code>invite</code></td>
+            <td>token, chatid, invitedhash, key?</td>
+            <td>User per Hash einladen (nur Owner/Admin).</td>
+        </tr>
+        <tr>
+            <td><code>getinvites</code></td>
+            <td>token</td>
+            <td>Eigene offene Einladungen auflisten.</td>
+        </tr>
+        <tr>
+            <td><code>rejectinvite</code></td>
+            <td>token, chatid</td>
+            <td>Einladung ablehnen.</td>
+        </tr>
+    </table>
+
+    <h2>Benutzer</h2>
+    <table>
+        <tr>
+            <th>Kommando</th>
+            <th>Parameter</th>
+            <th>Beschreibung</th>
+        </tr>
+        <tr>
+            <td><code>getprofiles</code></td>
+            <td>token, key?</td>
+            <td>Alle registrierten Profile auflisten.</td>
+        </tr>
+    </table>
+
+    <h2>Admin</h2>
+    <table>
+        <tr>
+            <th>Kommando</th>
+            <th>Parameter</th>
+            <th>Beschreibung</th>
+        </tr>
+        <tr>
+            <td><code>resetuser</code></td>
+            <td>token, key, userhash</td>
+            <td>Passwort/Tokens eines Users zurücksetzen.</td>
+        </tr>
+        <tr>
+            <td><code>deleteuser</code></td>
+            <td>token, key, userhash</td>
+            <td>User inkl. aller Daten löschen.</td>
+        </tr>
+        <tr>
+            <td><code>clear</code></td>
+            <td>key</td>
+            <td>Alle Daten auf dem Server unwiderruflich löschen.</td>
+        </tr>
+    </table>
+
+    <h2>Fehlercodes</h2>
+    <p>
+        Der HTTP-Status entspricht immer dem Fehlercode in <code>code</code>.
+        Details siehe <code>api-docs.yaml</code> / Swagger-UI.
+    </p>
+</body>
+
+</html>

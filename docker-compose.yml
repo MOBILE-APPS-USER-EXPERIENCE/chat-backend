@@ -1,0 +1,19 @@
+services:
+  backend:
+    image: ghcr.io/mobille-apps-user-experience/chat-backend:latest
+    environment:
+      - ADMIN_KEY_HASH=${ADMIN_KEY_HASH}
+      - DB_PATH=/app/data/chat.db
+    volumes:
+      - ./chat_data:/app/data
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.chat-server.rule=Host(`chat.example.com`)
+      - traefik.http.routers.chat-server.entrypoints=websecure
+      - traefik.http.routers.chat-server.tls.certresolver=letsencrypt
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
