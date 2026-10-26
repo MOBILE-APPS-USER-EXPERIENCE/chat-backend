@@ -10,6 +10,7 @@ services:
       - traefik.http.routers.chat-server.rule=Host(`${SERVICE_DOMAIN}`)
       - traefik.http.routers.chat-server.entrypoints=websecure
       - traefik.http.routers.chat-server.tls.certresolver=letsencrypt
+      - traefik.http.services.chat-server.loadbalancer.server.port=${PORT}
     networks:
       - traefik
 
