@@ -11,7 +11,7 @@
     "hash-secret": "ts-node src/scripts/hash-secret.ts"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
+    "better-sqlite3": "^11.9.1",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "knex": "^3.3.0",
@@ -25,6 +25,6 @@
     "typescript": "^5.6.0"
   },
   "allowScripts": {
-    "better-sqlite3@13.0.3": true
+    "better-sqlite3@11.9.1": true
   }
 }

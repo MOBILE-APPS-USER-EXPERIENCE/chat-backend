@@ -29,4 +29,5 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/src/manual.html ./manual.html
 VOLUME /app/data
 EXPOSE 8080
+RUN node -e "const db = require('better-sqlite3')(':memory:'); db.exec('SELECT 1'); console.log('better-sqlite3 OK: lädt und funktioniert zur Build-Zeit')"
 CMD ["node", "dist/index.js"]
