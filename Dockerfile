@@ -6,7 +6,6 @@ RUN apk add --no-cache python3 make g++
 COPY package*.json tsconfig.json ./
 RUN npm ci
 COPY src ./src
-COPY manual.html ./manual.html
 RUN npm run build
 
 # ---- Production Stage ----
@@ -17,7 +16,10 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/manual.html ./manual.html
+# manual.html liegt unter src/ und wird von tsc NICHT mitkompiliert
+# (lib/manual.ts erwartet sie zur Laufzeit unter process.cwd(), also /app) ->
+# deshalb gezielt aus der Build-Stage nach /app/manual.html kopieren.
+COPY --from=build /app/src/manual.html ./manual.html
 VOLUME /app/data
 EXPOSE 8080
 CMD ["node", "dist/index.js"]
