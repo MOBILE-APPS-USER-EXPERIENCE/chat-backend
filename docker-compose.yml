@@ -1,6 +1,6 @@
 services:
   backend:
-    image: ghcr.io/mobille-apps-user-experience/chat-backend:latest
+    image: ghcr.io/mobile-apps-user-experience/chat-backend:latest
     env_file:
       - ./.env
     volumes:
