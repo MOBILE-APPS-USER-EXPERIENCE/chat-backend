@@ -55,6 +55,9 @@ jobs:
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
 
+            - name: Verify native module loads correctly
+              run: docker run --rm smoke-test:latest node -e "require('better-sqlite3')(':memory:'); console.log('better-sqlite3 OK')"
+
             - name: Smoke test container
               run: |
                   docker run -d --name smoke-test -p 8080:8080 \
